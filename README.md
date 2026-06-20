@@ -1,8 +1,27 @@
 # Engram
 
-A local-first personal memory server that any MCP client plugs into — so your context, preferences, and history follow **you** across apps instead of living inside one vendor's walls.
+**Your memory, on your machine.**
 
-Your memory lives on your machine, in a store you control, exposed over the [Model Context Protocol](https://modelcontextprotocol.io) so it works across every MCP-capable client.
+Every AI platform is racing to build "memory" — and locking it inside their own
+walls. Your context, preferences, and history end up trapped in one vendor's
+product, invisible and unportable. Engram is the opposite bet: an open,
+local-first memory layer that *you* own, that follows *you* across every tool.
+
+Engram runs as a [Model Context Protocol](https://modelcontextprotocol.io)
+server, so any MCP-capable client (Claude Code, Claude Desktop, and more as they
+adopt the protocol) can read and write your memory. Everything stays on your
+machine — the store, the search, even the embedding model. Nothing leaves.
+
+### How it works
+- **Local-first** — a single SQLite file on your disk is the source of truth.
+- **On-device embeddings** — semantic search runs locally (bge-small); your
+  memories are never sent to a third party.
+- **Hybrid recall** — keyword (FTS5) fused with semantic similarity, so it finds
+  what's *relevant*, not just what shares words.
+- **Stays coherent** — flags related or contradicting memories on save instead
+  of silently piling up duplicates.
+- **You're in control** — a built-in inspect UI to browse, edit, tag, import,
+  and export everything you've stored.
 
 ## Status
 
