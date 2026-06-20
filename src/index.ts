@@ -21,6 +21,8 @@ import {
  * NEVER write to stdout (console.log) — it corrupts the protocol stream.
  * All diagnostics go to stderr via `log()`.
  */
+
+
 function log(message: string): void {
   process.stderr.write(`[engram] ${message}\n`);
 }

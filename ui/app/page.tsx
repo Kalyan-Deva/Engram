@@ -84,7 +84,10 @@ export default function Page() {
   return (
     <div className="wrap">
       <header className="top">
-        <h1>Engram</h1>
+        <div className="brand">
+          <span className="dot" />
+          <h1>Engram</h1>
+        </div>
         <a className="btn" href="/api/export">
           Export JSON
         </a>
@@ -193,7 +196,7 @@ function MemoryCard({ memory, onChanged }: { memory: Memory; onChanged: () => vo
   }
 
   return (
-    <div className="card">
+    <div className={`card type-${type}`}>
       <textarea value={content} onChange={(e) => setContent(e.target.value)} />
       <div className="row">
         <select value={type} onChange={(e) => setType(e.target.value as MemoryType)}>
@@ -211,6 +214,7 @@ function MemoryCard({ memory, onChanged }: { memory: Memory; onChanged: () => vo
         />
       </div>
       <div className="meta">
+        <span className={`chip ${type}`}>{type}</span>
         <span className="badge">#{memory.id}</span>
         <span className={`badge ${memory.has_embedding ? "semantic" : ""}`}>
           {memory.has_embedding ? "semantic ✓" : "keyword only"}

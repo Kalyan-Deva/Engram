@@ -1,14 +1,18 @@
 :root {
-  --bg: #0d0f12;
-  --panel: #16191f;
-  --panel-2: #1c2027;
-  --border: #272c35;
-  --text: #e6e8ec;
-  --muted: #8b929e;
-  --accent: #6ea8fe;
-  --accent-dim: #2b3a55;
-  --danger: #e5616a;
-  --radius: 12px;
+  --bg: #0a0b0e;
+  --panel: #14161c;
+  --panel-2: #1b1e26;
+  --border: #262a33;
+  --text: #f3f4f7;
+  --muted: #868d9b;
+
+  --purple: #7b5cff;
+  --blue: #4f86ff;
+  --coral: #ff556b;
+  --mint: #22d3a5;
+
+  --grad: linear-gradient(135deg, #8a5cff 0%, #4f86ff 100%);
+  --radius: 18px;
 }
 
 * {
@@ -24,30 +28,74 @@ body {
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   font-size: 15px;
   line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Ambient gradient glows, echoing the reference's floating spheres. */
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  z-index: 0;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  filter: blur(70px);
+  opacity: 0.18;
+  pointer-events: none;
+}
+
+body::before {
+  top: -130px;
+  left: -120px;
+  background: var(--purple);
+}
+
+body::after {
+  bottom: -150px;
+  right: -120px;
+  background: var(--coral);
 }
 
 .wrap {
-  max-width: 820px;
+  position: relative;
+  z-index: 1;
+  max-width: 860px;
   margin: 0 auto;
-  padding: 40px 20px 80px;
+  padding: 44px 22px 90px;
 }
 
 header.top {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand .dot {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--grad);
+  box-shadow: 0 0 18px rgba(123, 92, 255, 0.5);
 }
 
 h1 {
   font-size: 26px;
   margin: 0;
   letter-spacing: -0.02em;
+  font-weight: 650;
 }
 
 .tagline {
   color: var(--muted);
-  margin: 2px 0 24px;
+  margin: 10px 0 26px;
   font-size: 13.5px;
 }
 
@@ -55,26 +103,38 @@ h1 {
   background: var(--panel-2);
   color: var(--text);
   border: 1px solid var(--border);
-  border-radius: 9px;
-  padding: 7px 12px;
+  border-radius: 10px;
+  padding: 8px 14px;
   font-size: 13px;
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color 0.15s, background 0.15s, transform 0.05s;
 }
 
 .btn:hover {
-  border-color: var(--accent-dim);
+  border-color: #36506f;
+}
+
+.btn:active {
+  transform: translateY(1px);
 }
 
 .btn.primary {
-  background: var(--accent-dim);
-  border-color: var(--accent);
-  color: #dbe7ff;
+  background: var(--grad);
+  border: none;
+  color: #fff;
+  font-weight: 550;
+  box-shadow: 0 6px 18px rgba(79, 134, 255, 0.28);
+}
+
+.btn.primary:disabled {
+  opacity: 0.45;
+  box-shadow: none;
+  cursor: default;
 }
 
 .btn.danger:hover {
-  border-color: var(--danger);
-  color: var(--danger);
+  border-color: var(--coral);
+  color: var(--coral);
 }
 
 input,
@@ -83,37 +143,40 @@ select {
   background: var(--panel);
   color: var(--text);
   border: 1px solid var(--border);
-  border-radius: 9px;
-  padding: 9px 11px;
+  border-radius: 10px;
+  padding: 10px 13px;
   font-size: 14px;
   font-family: inherit;
   width: 100%;
   outline: none;
+  transition: border-color 0.15s;
 }
 
 input:focus,
 textarea:focus,
 select:focus {
-  border-color: var(--accent-dim);
+  border-color: var(--purple);
 }
 
 textarea {
   resize: vertical;
-  min-height: 44px;
+  min-height: 46px;
 }
 
 .search {
-  margin-bottom: 18px;
+  border-radius: 999px;
+  padding: 12px 18px;
+  margin-bottom: 20px;
 }
 
 .composer {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 14px;
-  margin-bottom: 26px;
+  padding: 16px;
+  margin-bottom: 16px;
   display: grid;
-  gap: 10px;
+  gap: 11px;
 }
 
 .row {
@@ -132,23 +195,49 @@ textarea {
 .count {
   color: var(--muted);
   font-size: 12.5px;
-  margin-bottom: 12px;
+  margin: 22px 0 14px;
 }
 
 .card {
+  position: relative;
+  overflow: hidden;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 14px;
+  padding: 16px 16px 16px 19px;
   margin-bottom: 12px;
   display: grid;
-  gap: 10px;
+  gap: 11px;
+}
+
+/* Colored accent stripe by memory type. */
+.card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--muted);
+}
+
+.card.type-fact::before {
+  background: var(--blue);
+}
+.card.type-preference::before {
+  background: var(--purple);
+}
+.card.type-project::before {
+  background: var(--coral);
+}
+.card.type-reference::before {
+  background: var(--mint);
 }
 
 .card .meta {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   color: var(--muted);
   font-size: 12px;
 }
@@ -156,14 +245,38 @@ textarea {
 .badge {
   border: 1px solid var(--border);
   border-radius: 999px;
-  padding: 2px 9px;
+  padding: 2px 10px;
   font-size: 11px;
   color: var(--muted);
 }
 
 .badge.semantic {
-  border-color: var(--accent-dim);
-  color: var(--accent);
+  color: #bcd2ff;
+  border-color: #34506f;
+}
+
+.chip {
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 11px;
+  font-weight: 550;
+}
+
+.chip.fact {
+  color: #bcd2ff;
+  background: rgba(79, 134, 255, 0.14);
+}
+.chip.preference {
+  color: #d6c9ff;
+  background: rgba(123, 92, 255, 0.16);
+}
+.chip.project {
+  color: #ffc6cf;
+  background: rgba(255, 85, 107, 0.15);
+}
+.chip.reference {
+  color: #b9f4e4;
+  background: rgba(34, 211, 165, 0.14);
 }
 
 .card .actions {
@@ -179,11 +292,11 @@ textarea {
 .empty {
   color: var(--muted);
   text-align: center;
-  padding: 50px 0;
+  padding: 56px 0;
 }
 
 .disclosure {
-  margin-bottom: 26px;
+  margin-bottom: 4px;
 }
 
 .disclosure > summary {
@@ -192,6 +305,20 @@ textarea {
   font-size: 13px;
   padding: 4px 0;
   user-select: none;
+  list-style: none;
+}
+
+.disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.disclosure > summary::before {
+  content: "+ ";
+  color: var(--purple);
+}
+
+.disclosure[open] > summary::before {
+  content: "– ";
 }
 
 .disclosure > summary:hover {
