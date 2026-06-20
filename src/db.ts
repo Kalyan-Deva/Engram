@@ -318,6 +318,30 @@ export function forgetMemory(id: number): boolean {
 }
 
 /**
+ * Bulk-import memories (e.g. from another tool's export). Reuses saveMemory so
+ * each item is deduped and embedded; reports how many were new vs merged.
+ */
+export async function importMemories(
+  items: { content: string; type?: MemoryType; tags?: string[] }[],
+): Promise<{ imported: number; merged: number; skipped: number }> {
+  let imported = 0;
+  let merged = 0;
+  let skipped = 0;
+  for (const item of items) {
+    const content = (item.content ?? "").trim();
+    if (!content) {
+      skipped++;
+      continue;
+    }
+    const existed = selectRowByContent.get(content) as MemoryRow | undefined;
+    await saveMemory({ content, type: item.type, tags: item.tags });
+    if (existed) merged++;
+    else imported++;
+  }
+  return { imported, merged, skipped };
+}
+
+/**
  * Re-embed any memories that have no vector — e.g. ones created or edited via
  * the inspect UI (which doesn't load the model) or saved while the embedder was
  * unavailable. Self-healing: keeps semantic recall complete without coupling

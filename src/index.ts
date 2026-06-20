@@ -10,6 +10,7 @@ import {
   updateMemory,
   forgetMemory,
   backfillEmbeddings,
+  importMemories,
   type Memory,
 } from "./db.js";
 
@@ -130,6 +131,34 @@ server.registerTool(
     const ok = forgetMemory(id);
     log(`forget(#${id}) -> ${ok}`);
     return textResult(ok ? `Forgot #${id}: ${m?.content ?? ""}` : `No memory #${id}.`);
+  },
+);
+
+server.registerTool(
+  "import_memories",
+  {
+    title: "Import memories",
+    description:
+      "Bulk-import memories from another source (e.g. an exported list). " +
+      "Identical content is merged, not duplicated.",
+    inputSchema: {
+      items: z
+        .array(
+          z.object({
+            content: z.string(),
+            type: memoryType.optional(),
+            tags: z.array(z.string()).optional(),
+          }),
+        )
+        .describe("The memories to import."),
+    },
+  },
+  async ({ items }) => {
+    const r = await importMemories(items);
+    log(`import_memories -> +${r.imported} merged ${r.merged} skipped ${r.skipped}`);
+    return textResult(
+      `Imported ${r.imported} new, merged ${r.merged} duplicate(s), skipped ${r.skipped} empty.`,
+    );
   },
 );
 

@@ -181,3 +181,104 @@ export function updateMemory(
 export function deleteMemory(id: number): boolean {
   return getDb().prepare(`DELETE FROM memories WHERE id = ?`).run(id).changes > 0;
 }
+
+export interface ImportItem {
+  content: string;
+  type?: MemoryType;
+  tags?: string[];
+}
+
+const VALID_TYPES = new Set<MemoryType>(["fact", "preference", "project", "reference"]);
+
+/**
+ * Parse pasted import text leniently. Accepts:
+ *  - a JSON array of objects ({content, type?, tags?}) or strings
+ *  - an Engram export object ({ memories: [...] })
+ *  - a single object
+ *  - otherwise, plain text: one memory per non-blank line
+ */
+export function parseImportText(text: string): ImportItem[] {
+  const trimmed = text.trim();
+  if (!trimmed) return [];
+
+  try {
+    const json: unknown = JSON.parse(trimmed);
+    const arr: unknown[] | null = Array.isArray(json)
+      ? json
+      : json && typeof json === "object" && Array.isArray((json as { memories?: unknown[] }).memories)
+        ? (json as { memories: unknown[] }).memories
+        : json && typeof json === "object" && typeof (json as { content?: unknown }).content === "string"
+          ? [json]
+          : null;
+    if (arr) {
+      return arr
+        .map((x): ImportItem => {
+          if (typeof x === "string") return { content: x };
+          const o = x as { content?: unknown; type?: unknown; tags?: unknown };
+          return {
+            content: typeof o.content === "string" ? o.content : "",
+            type: VALID_TYPES.has(o.type as MemoryType) ? (o.type as MemoryType) : undefined,
+            tags: Array.isArray(o.tags) ? o.tags.map(String) : undefined,
+          };
+        })
+        .filter((i) => i.content.trim());
+    }
+  } catch {
+    // Not JSON — fall through to line-based parsing.
+  }
+
+  return trimmed
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .map((content) => ({ content }));
+}
+
+/**
+ * Bulk-import with dedupe. New rows are inserted without a vector; the MCP
+ * server's backfill embeds them on its next start.
+ */
+export function importMemories(items: ImportItem[]): {
+  imported: number;
+  merged: number;
+  skipped: number;
+} {
+  const db = getDb();
+  const findByContent = db.prepare(`SELECT id, tags FROM memories WHERE content = ? LIMIT 1`);
+  const insert = db.prepare(
+    `INSERT INTO memories (content, type, tags, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`,
+  );
+  const mergeTags = db.prepare(`UPDATE memories SET tags = ?, updated_at = ? WHERE id = ?`);
+
+  let imported = 0;
+  let merged = 0;
+  let skipped = 0;
+
+  db.transaction(() => {
+    for (const item of items) {
+      const content = item.content.trim();
+      if (!content) {
+        skipped++;
+        continue;
+      }
+      const type: MemoryType = VALID_TYPES.has(item.type as MemoryType)
+        ? (item.type as MemoryType)
+        : "fact";
+      const tags = Array.isArray(item.tags) ? item.tags.map(String) : [];
+      const ts = nowIso();
+      const existing = findByContent.get(content) as { id: number; tags: string | null } | undefined;
+      if (existing) {
+        const mergedTags = Array.from(
+          new Set([...(existing.tags ? JSON.parse(existing.tags) : []), ...tags]),
+        );
+        mergeTags.run(JSON.stringify(mergedTags), ts, existing.id);
+        merged++;
+      } else {
+        insert.run(content, type, JSON.stringify(tags), ts, ts);
+        imported++;
+      }
+    }
+  })();
+
+  return { imported, merged, skipped };
+}

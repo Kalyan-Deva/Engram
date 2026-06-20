@@ -26,6 +26,10 @@ export default function Page() {
   const [newType, setNewType] = useState<MemoryType>("fact");
   const [newTags, setNewTags] = useState("");
 
+  const [importText, setImportText] = useState("");
+  const [importMsg, setImportMsg] = useState("");
+  const [importing, setImporting] = useState(false);
+
   const load = useCallback(async (q: string) => {
     setLoading(true);
     const res = await fetch(`/api/memories${q ? `?q=${encodeURIComponent(q)}` : ""}`);
@@ -56,6 +60,25 @@ export default function Page() {
     setNewContent("");
     setNewTags("");
     void load(query);
+  }
+
+  async function doImport() {
+    if (!importText.trim()) return;
+    setImporting(true);
+    const res = await fetch("/api/import", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: importText }),
+    });
+    if (res.ok) {
+      const r = (await res.json()) as { imported: number; merged: number; skipped: number };
+      setImportMsg(`Imported ${r.imported} new, merged ${r.merged}, skipped ${r.skipped}.`);
+      setImportText("");
+      void load(query);
+    } else {
+      setImportMsg("Nothing to import.");
+    }
+    setImporting(false);
   }
 
   return (
@@ -100,6 +123,27 @@ export default function Page() {
           </button>
         </div>
       </div>
+
+      <details className="disclosure">
+        <summary>Import memories</summary>
+        <div className="composer">
+          <textarea
+            placeholder="Paste a JSON array, an Engram export, or one memory per line…"
+            value={importText}
+            onChange={(e) => setImportText(e.target.value)}
+          />
+          <div className="importbar">
+            <span className="hint">{importMsg}</span>
+            <button
+              className="btn primary"
+              onClick={doImport}
+              disabled={importing || !importText.trim()}
+            >
+              {importing ? "Importing…" : "Import"}
+            </button>
+          </div>
+        </div>
+      </details>
 
       <div className="count">
         {loading ? "Loading…" : `${memories.length} ${query ? "match" : "memor"}${memories.length === 1 ? (query ? "" : "y") : query ? "es" : "ies"}`}
