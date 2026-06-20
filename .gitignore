@@ -1,0 +1,14 @@
+node_modules/
+dist/
+*.log
+
+# Next.js (ui/)
+.next/
+next-env.d.ts
+*.tsbuildinfo
+
+# Local memory store — never commit personal data
+*.db
+*.db-shm
+*.db-wal
+.engram/
