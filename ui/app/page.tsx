@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 type MemoryType = "fact" | "preference" | "project" | "reference";
 
@@ -21,6 +21,7 @@ export default function Page() {
   const [memories, setMemories] = useState<Memory[]>([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  const [typeFilter, setTypeFilter] = useState<MemoryType | null>(null);
 
   const [newContent, setNewContent] = useState("");
   const [newType, setNewType] = useState<MemoryType>("fact");
@@ -81,25 +82,59 @@ export default function Page() {
     setImporting(false);
   }
 
+  const counts = useMemo(() => {
+    const c: Record<string, number> = {};
+    for (const m of memories) c[m.type] = (c[m.type] ?? 0) + 1;
+    return c;
+  }, [memories]);
+  const shown = typeFilter ? memories.filter((m) => m.type === typeFilter) : memories;
+
   return (
-    <div className="wrap">
-      <header className="top">
+    <div className="shell">
+      <aside className="sidebar">
         <div className="brand">
           <span className="dot" />
           <h1>Engram</h1>
         </div>
-        <a className="btn" href="/api/export">
+        <nav className="nav">
+          <button
+            className={`navitem ${!typeFilter ? "active" : ""}`}
+            onClick={() => setTypeFilter(null)}
+          >
+            <span className="nav-ic" />
+            All memories
+            <span className="nav-count">{memories.length}</span>
+          </button>
+          {TYPES.map((t) => (
+            <button
+              key={t}
+              className={`navitem ${typeFilter === t ? "active" : ""}`}
+              onClick={() => setTypeFilter(t)}
+            >
+              <span className={`tdot ${t}`} />
+              {t}s
+              <span className="nav-count">{counts[t] ?? 0}</span>
+            </button>
+          ))}
+        </nav>
+        <div className="sidecard">
+          <div className="sidecard-title">All local</div>
+          <p>Your memories never leave this machine.</p>
+        </div>
+        <a className="btn export" href="/api/export">
           Export JSON
         </a>
-      </header>
-      <p className="tagline">Your memory, on your machine.</p>
+      </aside>
 
-      <input
-        className="search"
-        placeholder="Search your memory…"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-      />
+      <main className="main">
+        <p className="tagline">Your memory, on your machine.</p>
+
+        <input
+          className="search"
+          placeholder="Search your memory…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
 
       <div className="composer">
         <textarea
@@ -149,16 +184,23 @@ export default function Page() {
       </details>
 
       <div className="count">
-        {loading ? "Loading…" : `${memories.length} ${query ? "match" : "memor"}${memories.length === 1 ? (query ? "" : "y") : query ? "es" : "ies"}`}
+        {loading
+          ? "Loading…"
+          : `${shown.length} ${shown.length === 1 ? "memory" : "memories"}${
+              typeFilter ? ` · ${typeFilter}` : ""
+            }${query ? ` · matching “${query}”` : ""}`}
       </div>
 
-      {!loading && memories.length === 0 && (
-        <div className="empty">No memories yet. Add one above.</div>
+      {!loading && shown.length === 0 && (
+        <div className="empty">
+          {query || typeFilter ? "No matching memories." : "No memories yet. Add one above."}
+        </div>
       )}
 
-      {memories.map((m) => (
+      {shown.map((m) => (
         <MemoryCard key={m.id} memory={m} onChanged={() => void load(query)} />
       ))}
+      </main>
     </div>
   );
 }
