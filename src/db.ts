@@ -317,6 +317,49 @@ export function forgetMemory(id: number): boolean {
   return info.changes > 0;
 }
 
+export interface RelatedMemory {
+  memory: Memory;
+  similarity: number;
+}
+
+/**
+ * Find existing memories semantically similar to some text, by embedding
+ * cosine. Used to surface near-duplicates and potential contradictions on save
+ * — exact-text dedupe can't catch "I like X" vs "I dislike X", but this can,
+ * because they sit close in embedding space. Returns [] when no embedder.
+ */
+export async function findRelated(
+  content: string,
+  opts: { limit?: number; minSimilarity?: number; excludeId?: number } = {},
+): Promise<RelatedMemory[]> {
+  const text = content.trim();
+  if (!text) return [];
+  const embedder = await getEmbedder();
+  if (!embedder) return [];
+
+  let qVec: Float32Array;
+  try {
+    qVec = await embedder.embedPassage(text);
+  } catch {
+    return [];
+  }
+
+  const minSimilarity = opts.minSimilarity ?? 0.8;
+  const limit = opts.limit ?? 3;
+  const rows = db
+    .prepare(`SELECT id, embedding FROM memories WHERE embedding IS NOT NULL`)
+    .all() as { id: number; embedding: Buffer }[];
+
+  return rows
+    .filter((r) => r.id !== opts.excludeId)
+    .map((r) => ({ id: r.id, similarity: cosine(qVec, blobToVec(r.embedding)) }))
+    .filter((s) => s.similarity >= minSimilarity)
+    .sort((a, b) => b.similarity - a.similarity)
+    .slice(0, limit)
+    .map((s) => ({ memory: getMemory(s.id), similarity: s.similarity }))
+    .filter((r): r is RelatedMemory => r.memory !== null);
+}
+
 /**
  * Bulk-import memories (e.g. from another tool's export). Reuses saveMemory so
  * each item is deduped and embedded; reports how many were new vs merged.

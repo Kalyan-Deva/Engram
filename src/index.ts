@@ -11,6 +11,7 @@ import {
   forgetMemory,
   backfillEmbeddings,
   importMemories,
+  findRelated,
   type Memory,
 } from "./db.js";
 
@@ -67,7 +68,9 @@ server.registerTool(
     description:
       "Store a durable fact about the user (a preference, an ongoing project, a " +
       "reference, etc.). Propose this to the user and save once confirmed. " +
-      "Identical content is deduped automatically.",
+      "Identical content is deduped automatically. If the result flags related " +
+      "existing memories, decide whether this updates/contradicts one and " +
+      "reconcile with update_memory or forget rather than leaving duplicates.",
     inputSchema: {
       content: z.string().describe("The fact to remember, in a self-contained sentence."),
       type: memoryType.optional().describe("Category (default 'fact')."),
@@ -77,8 +80,41 @@ server.registerTool(
   },
   async ({ content, type, tags, source }) => {
     const saved = await saveMemory({ content, type, tags, source });
-    log(`save_memory -> #${saved.id}`);
-    return textResult(`Saved ${formatMemory(saved)}`);
+    const related = await findRelated(content, { excludeId: saved.id, minSimilarity: 0.8, limit: 3 });
+    log(`save_memory -> #${saved.id}${related.length ? ` (${related.length} related)` : ""}`);
+    let text = `Saved ${formatMemory(saved)}`;
+    if (related.length > 0) {
+      text +=
+        `\n\n⚠ Possibly related existing memories — if this updates or contradicts one,` +
+        ` reconcile with update_memory or forget:\n` +
+        related
+          .map((r) => `  • #${r.memory.id} (${r.similarity.toFixed(2)}) ${r.memory.content}`)
+          .join("\n");
+    }
+    return textResult(text);
+  },
+);
+
+server.registerTool(
+  "find_related",
+  {
+    title: "Find related memories",
+    description:
+      "Find existing memories semantically similar to some text. Use before saving " +
+      "to avoid duplicates/contradictions, or to surface what's already known about a topic.",
+    inputSchema: {
+      content: z.string().describe("Text to find related memories for."),
+      limit: z.number().int().positive().max(20).optional().describe("Max results (default 5)."),
+    },
+  },
+  async ({ content, limit }) => {
+    const related = await findRelated(content, { limit: limit ?? 5, minSimilarity: 0.7 });
+    if (related.length === 0) return textResult("No related memories found.");
+    return textResult(
+      related
+        .map((r) => `#${r.memory.id} (${r.similarity.toFixed(2)}) [${r.memory.type}]: ${r.memory.content}`)
+        .join("\n"),
+    );
   },
 );
 
